@@ -6,6 +6,8 @@ import com.research.assistant.dto.ResearchRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+
 import java.util.List;
 
 @Service
@@ -33,18 +35,23 @@ public class ResearchService {
                 List.of(new Content(List.of(new Part(prompt))))
         );
 
-//        String jsonBody;
-//        try {
-//            jsonBody = objectMapper.writeValueAsString(geminiRequest);
-//        } catch (Exception e) {
-//            throw new RuntimeException("Error converting request to JSON", e);
-//        }
+//        String geminiResponse = webClient.post()
+//                .uri(geminiApiUrl + geminiApiKey)
+//                .header("Content-Type", "application/json")
+//                .bodyValue(geminiRequest)
+//                .retrieve()
+//                .bodyToMono(String.class)
+//                .block();
 
         String geminiResponse = webClient.post()
                 .uri(geminiApiUrl + geminiApiKey)
                 .header("Content-Type", "application/json")
                 .bodyValue(geminiRequest)
                 .retrieve()
+                .onStatus(
+                        status -> status.value() == 429,
+                        response -> Mono.error(new RuntimeException("Gemini API quota exceeded. Please wait 30 seconds."))
+                )
                 .bodyToMono(String.class)
                 .block();
 
